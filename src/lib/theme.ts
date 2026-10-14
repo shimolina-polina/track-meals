@@ -1,5 +1,3 @@
-import { useColorScheme } from 'react-native';
-
 export type ThemeName = 'light' | 'dark';
 
 export interface Theme {
@@ -50,8 +48,3 @@ export const themes: Record<ThemeName, Theme> = {
     disabled: '#4B5563',
   },
 };
-
-export function useTheme(): Theme {
-  const scheme = useColorScheme();
-  return scheme === 'dark' ? themes.dark : themes.light;
-}

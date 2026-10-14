@@ -11,7 +11,7 @@ import {
   toDateKey,
   WEEKDAYS,
 } from '@/lib/date';
-import { useTheme, type Theme } from '@/lib/theme';
+import { useTheme, type Theme } from '@/hooks/useTheme';
 
 interface CalendarProps {
   month: Date;

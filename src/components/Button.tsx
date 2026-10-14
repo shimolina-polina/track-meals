@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text } from 'react-native';
 
-import { useTheme } from '@/lib/theme';
+import { useTheme } from '@/hooks/useTheme';
 
 interface ButtonProps {
   label: string;

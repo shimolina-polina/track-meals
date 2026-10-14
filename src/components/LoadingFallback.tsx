@@ -1,6 +1,6 @@
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
-import { useTheme } from '@/lib/theme';
+import { useTheme } from '@/hooks/useTheme';
 
 interface LoadingFallbackProps {
   label?: string;

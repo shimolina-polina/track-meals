@@ -3,7 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { useTheme } from '@/lib/theme';
+import { useTheme } from '@/hooks/useTheme';
 import { MealsProvider } from '@/store/meals';
 
 export { ErrorFallback as ErrorBoundary } from '@/components/ErrorFallback';

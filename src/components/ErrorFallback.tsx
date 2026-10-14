@@ -2,7 +2,7 @@ import type { ErrorBoundaryProps } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
-import { useTheme } from '@/lib/theme';
+import { useTheme } from '@/hooks/useTheme';
 
 export function ErrorFallback({ error, retry }: ErrorBoundaryProps) {
   const theme = useTheme();

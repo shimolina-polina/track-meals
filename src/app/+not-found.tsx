@@ -1,7 +1,7 @@
 import { Link, Stack } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { useTheme } from '@/lib/theme';
+import { useTheme } from '@/hooks/useTheme';
 
 export default function NotFoundScreen() {
   const theme = useTheme();

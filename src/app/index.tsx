@@ -11,7 +11,7 @@ import { Calendar } from '@/components/Calendar';
 import { LoadingFallback } from '@/components/LoadingFallback';
 import { formatLongDate, toDateKey } from '@/lib/date';
 import { hasLiquid, totalCalories, totalLiquidMl } from '@/lib/meals';
-import { useTheme } from '@/lib/theme';
+import { useTheme } from '@/hooks/useTheme';
 import { useMeals } from '@/store/meals';
 
 export default function CalendarScreen() {

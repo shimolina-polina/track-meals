@@ -16,7 +16,7 @@ import { Button } from '@/components/Button';
 import { LoadingFallback } from '@/components/LoadingFallback';
 import { formatLongDate, fromDateKey } from '@/lib/date';
 import { hasLiquid, mealTypeLabel, MEAL_TYPES, totalCalories, totalLiquidMl, type MealType } from '@/lib/meals';
-import { useTheme } from '@/lib/theme';
+import { useTheme } from '@/hooks/useTheme';
 import { useMeals } from '@/store/meals';
 import {useSafeAreaInsets} from "react-native-safe-area-context";
 
