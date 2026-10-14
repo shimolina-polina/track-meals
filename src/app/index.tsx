@@ -1,15 +1,15 @@
 import { Link, router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import {Pressable, ScrollView, StyleSheet, Text, View, Alert, Modal, TouchableOpacity, Platform} from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { Button } from '@/components/Button';
-import { exportMealsToCsv } from '@/lib/exportCsv';
 import { Calendar } from '@/components/Calendar';
+import { ExportSheet } from '@/components/ExportSheet';
 import { LoadingFallback } from '@/components/LoadingFallback';
 import { formatLongDate, toDateKey } from '@/lib/date';
+import { pluralizeMeals } from '@/lib/i18n';
 import { hasLiquid, totalCalories, totalLiquidMl } from '@/lib/meals';
 import { useTheme } from '@/hooks/useTheme';
 import { useMeals } from '@/store/meals';
@@ -21,15 +21,6 @@ export default function CalendarScreen() {
   const [month, setMonth] = useState(() => new Date());
   const [selectedKey, setSelectedKey] = useState(() => toDateKey(new Date()));
   const [showExport, setShowExport] = useState(false);
-  const [fromDate, setFromDate] = useState(() => {
-    const date = new Date();
-    date.setDate(date.getDate() - 6);
-    return date;
-  });
-
-  const [toDate, setToDate] = useState(new Date());
-  const [datePicker, setDatePicker] = useState<'from' | 'to' | null>(null);
-
 
   const mealCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -115,7 +106,7 @@ export default function CalendarScreen() {
         <Text style={StyleSheet.flatten([styles.cardMeta, { color: theme.subtext }])}>
           {selectedMeals.length === 0
             ? 'Ещё нет приёмов пищи'
-            : `${selectedMeals.length} ${selectedMeals.length % 10 === 1 ? 'прием' : selectedMeals.length % 10 === 2 || selectedMeals.length % 10 === 3 || selectedMeals.length % 10 === 4 ? 'приема' : 'приемов'} пищи · ${totalCalories(selectedMeals)} ккал${hasLiquid(selectedMeals) ? ` · ${totalLiquidMl(selectedMeals)} мл` : ""}`}
+            : `${selectedMeals.length} ${pluralizeMeals(selectedMeals.length)} пищи · ${totalCalories(selectedMeals)} ккал${hasLiquid(selectedMeals) ? ` · ${totalLiquidMl(selectedMeals)} мл` : ""}`}
         </Text>
 
         {selectedMeals.length > 0 ? (
@@ -146,131 +137,11 @@ export default function CalendarScreen() {
         />
       </View>
     </ScrollView>
-      <Modal transparent visible={showExport} animationType="slide" onRequestClose={() => setShowExport(false)}>
-        <View style={{ flex:1, backgroundColor:'rgba(0,0,0,0.5)', justifyContent:'flex-end' }}>
-          <View style={StyleSheet.flatten([{ backgroundColor:theme.card, borderTopLeftRadius:16, borderTopRightRadius:16, padding:16, gap:12 }, { paddingBottom: Math.max(16, insets.bottom) }])}>
-            <Text style={{ color:theme.text, fontSize:16, fontWeight:'700' }}>Экспорт в CSV</Text>
-            <View style={{ flexDirection:'column', gap:8, flexWrap:'wrap' }}>
-              <View style={{display: 'flex', flexDirection: 'row', gap: 8}}>
-                <TouchableOpacity
-                  onPress={async () => {
-                    const end = new Date();
-                    const start = new Date();
-                    start.setDate(start.getDate() - 6);
-                    setFromDate(start);
-                    setToDate(end);
-                  }}
-                  style={{ padding:10, borderRadius:10, borderWidth: 1,
-                    borderColor: theme.border }}>
-                  <Text style={{ color:theme.text }}>За неделю</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    onPress={async ()=>{
-                      const end = new Date();
-                      const start = new Date();
-                      start.setDate(start.getDate() - 29);
-                      setFromDate(start);
-                      setToDate(end);
-                    }}
-                    style={{ padding:10, borderRadius:10, borderWidth: 1,
-                      borderColor: theme.border }}>
-                  <Text style={{ color:theme.text }}>За месяц</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={{display: 'flex', flexDirection: 'row', gap: 8}}>
-                <TouchableOpacity
-                    onPress={() => setDatePicker('from')}
-                    style={{
-                      padding: 12,
-                      borderRadius: 10,
-                      borderWidth: 1,
-                      borderColor: theme.border,
-                    }}
-                >
-                  <Text style={{ color: theme.text }}>
-                    С: {fromDate.toLocaleDateString('ru-RU')}
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    onPress={() => setDatePicker('to')}
-                    style={{
-                      padding: 12,
-                      borderRadius: 10,
-                      borderWidth: 1,
-                      borderColor: theme.border,
-                    }}
-                >
-                  <Text style={{ color: theme.text }}>
-                    По: {toDate.toLocaleDateString('ru-RU')}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              <TouchableOpacity
-                  onPress={async () => {
-                    setShowExport(false);
-                    setDatePicker(null);
-
-                    try {
-                      await exportMealsToCsv(mealsByDate, {
-                        range: 'range',
-                        from: fromDate,
-                        to: toDate,
-                      });
-
-                      Alert.alert('Готово', 'Файл сохранён/отправлен');
-                    } catch (e: unknown) {
-                      const message = e instanceof Error ? e.message : String(e);
-                      Alert.alert('Ошибка', message);
-                    }
-                  }}
-                  style={{
-                    padding: 14,
-                    borderRadius: 10,
-                    backgroundColor: theme.primary,
-                    alignItems: 'center',
-                  }}
-              >
-                <Text style={{ color: theme.onPrimary, fontWeight: '600' }}>
-                  Экспортировать CSV
-                </Text>
-              </TouchableOpacity>
-
-            {datePicker && (
-                <DateTimePicker
-                    value={datePicker === 'from' ? fromDate : toDate}
-                    mode="date"
-                    maximumDate={new Date()}
-                    onChange={(_, selectedDate) => {
-                      if (Platform.OS === 'android') {
-                        setDatePicker(null);
-                      }
-
-                      if (!selectedDate) return;
-
-                      if (datePicker === 'from') {
-                        setFromDate(selectedDate);
-
-                        if (selectedDate > toDate) {
-                          setToDate(selectedDate);
-                        }
-                      } else {
-                        setToDate(selectedDate);
-
-                        if (selectedDate < fromDate) {
-                          setFromDate(selectedDate);
-                        }
-                      }
-                    }}
-                />
-            )}
-            </View>
-            <TouchableOpacity onPress={()=>setShowExport(false)} style={{ padding:10, alignItems:'center' }}>
-              <Text style={{ color:theme.text }}>Отмена</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      <ExportSheet
+        visible={showExport}
+        mealsByDate={mealsByDate}
+        onClose={() => setShowExport(false)}
+      />
     </>
   );
 }
@@ -290,20 +161,11 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '800',
   },
-  subtitle: {
-    fontSize: 14,
-    marginTop: 2,
-    wordWrap: 'break-word',
-  },
   helpButton: {
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 999,
     paddingVertical: 8,
     paddingHorizontal: 16,
-  },
-  helpText: {
-    fontSize: 14,
-    fontWeight: '600',
   },
   card: {
     borderRadius: 16,
