@@ -1,6 +1,5 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/hooks/useTheme';
@@ -9,9 +8,9 @@ import { MealsProvider } from '@/store/meals';
 export { ErrorFallback as ErrorBoundary } from '@/components/ErrorFallback';
 
 export default function RootLayout() {
-  const scheme = useColorScheme();
   const theme = useTheme();
-  const base = scheme === 'dark' ? DarkTheme : DefaultTheme;
+  const isDark = theme.name === 'dark';
+  const base = isDark ? DarkTheme : DefaultTheme;
 
   return (
     <SafeAreaProvider>
@@ -19,7 +18,7 @@ export default function RootLayout() {
         <ThemeProvider
           value={{
             ...base,
-            dark: scheme === 'dark',
+            dark: isDark,
             colors: {
               ...base.colors,
               primary: theme.primary,
@@ -30,7 +29,7 @@ export default function RootLayout() {
             },
           }}
         >
-          <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+          <StatusBar style={isDark ? 'light' : 'dark'} />
           <Stack
             screenOptions={{
               headerStyle: { backgroundColor: theme.card },

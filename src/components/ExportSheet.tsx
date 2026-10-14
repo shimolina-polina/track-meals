@@ -38,7 +38,7 @@ export function ExportSheet({ visible, mealsByDate, onClose }: ExportSheetProps)
     setDatePicker(null);
     onClose();
     try {
-      await exportMealsToCsv(mealsByDate, { range: 'range', from: fromDate, to: toDate });
+      await exportMealsToCsv(mealsByDate, { from: fromDate, to: toDate });
       Alert.alert('Готово', 'Файл сохранён/отправлен');
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : String(e);

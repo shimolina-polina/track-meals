@@ -5,12 +5,9 @@ import * as Sharing from 'expo-sharing';
 import { type MealsByDate, type Meal, mealTypeLabel } from '@/lib/meals';
 import { fromDateKey, formatLongDate, toDateKey } from '@/lib/date';
 
-export type ExportRange = 'week' | 'month' | 'range';
-
 export interface ExportOptions {
-  range: ExportRange;
-  from?: Date;
-  to?: Date;
+  from: Date;
+  to: Date;
 }
 
 function getStartOfDay(d: Date): Date {
@@ -21,26 +18,10 @@ function endOfDay(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
 }
 
-function addDays(d: Date, n: number): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
-}
-
-export function computeRange(options: ExportOptions, now = new Date()): { from: Date; to: Date } {
-  const today = getStartOfDay(now);
-  if (options.range === 'week') {
-    const from = addDays(today, -6);
-    return { from, to: endOfDay(today) };
-  }
-  if (options.range === 'month') {
-    const from = new Date(today.getFullYear(), today.getMonth(), 1);
-    return { from, to: endOfDay(today) };
-  }
-  if (options.range === 'range') {
-    const from = options.from ? getStartOfDay(options.from) : today;
-    const to = options.to ? endOfDay(options.to) : endOfDay(today);
-    return { from, to };
-  }
-  return { from: today, to: endOfDay(today) };
+export function computeRange(options: ExportOptions): { from: Date; to: Date } {
+  const from = options.from ? getStartOfDay(options.from) : getStartOfDay(new Date());
+  const to = options.to ? endOfDay(options.to) : endOfDay(new Date());
+  return { from, to };
 }
 
 function escapeCsv(value: unknown): string {
@@ -51,7 +32,6 @@ function escapeCsv(value: unknown): string {
 export interface ExportResult {
   uri: string;
   shared: boolean;
-  canceled?: boolean;
 }
 
 export async function exportMealsToCsv(mealsByDate: MealsByDate, options: ExportOptions): Promise<ExportResult> {

@@ -37,6 +37,7 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
+    "typecheck": "tsc --noEmit",
     "build:android": "cd android && ./gradlew assembleRelease",
     "icons": "node scripts/generate-icons.mjs"
   },

@@ -74,10 +74,10 @@ function sanitizeMeal(value: unknown): Meal | null {
       ? Math.max(0, Math.round(record.calories))
       : null;
   const liquidMl =
-    typeof (record as any).liquidMl === 'number' && Number.isFinite((record as any).liquidMl)
-      ? Math.max(0, Math.round((record as any).liquidMl))
+    typeof record.liquidMl === 'number' && Number.isFinite(record.liquidMl)
+      ? Math.max(0, Math.round(record.liquidMl))
       : null;
-  const timeRaw = (record as any).time;
+  const timeRaw = record.time;
   const time = typeof timeRaw === 'string' ? normTime(timeRaw) : null;
   return {
     id: record.id,
