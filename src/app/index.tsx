@@ -50,8 +50,8 @@ export default function CalendarScreen() {
     router.push({ pathname: '/day/[date]', params: { date: selectedKey } });
   };
 
-  const openSelectedDay = (selectedKey: string) => {
-    router.push({ pathname: '/day/[date]', params: { date: selectedKey } });
+  const openSelectedDay = (dayKey: string) => {
+    router.push({ pathname: '/day/[date]', params: { date: dayKey } });
   };
 
   return (
@@ -219,8 +219,9 @@ export default function CalendarScreen() {
                       });
 
                       Alert.alert('Готово', 'Файл сохранён/отправлен');
-                    } catch (e: any) {
-                      Alert.alert('Ошибка', String(e?.message || e));
+                    } catch (e: unknown) {
+                      const message = e instanceof Error ? e.message : String(e);
+                      Alert.alert('Ошибка', message);
                     }
                   }}
                   style={{

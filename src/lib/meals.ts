@@ -130,6 +130,4 @@ export function hasLiquid(meals: Meal[]): boolean {
   return meals.some((meal) => meal.liquidMl !== null);
 }
 
-export function hasCalories(meals: Meal[]): boolean {
-  return meals.some((meal) => meal.calories !== null);
-}
+

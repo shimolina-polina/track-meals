@@ -22,7 +22,6 @@ import {
 interface MealsContextValue {
   isReady: boolean;
   mealsByDate: MealsByDate;
-  trackedDates: Set<string>;
   getMeals: (dateKey: string) => Meal[];
   addMeal: (dateKey: string, input: MealInput) => void;
   updateMeal: (dateKey: string, mealId: string, input: MealInput) => void;
@@ -109,23 +108,17 @@ export function MealsProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const trackedDates = useMemo(
-    () => new Set(Object.keys(mealsByDate).filter((key) => mealsByDate[key].length > 0)),
-    [mealsByDate],
-  );
-
   const value = useMemo<MealsContextValue>(
     () => ({
       isReady,
       mealsByDate,
-      trackedDates,
       getMeals,
       addMeal,
       updateMeal,
       removeMeal,
       clearDay,
     }),
-    [isReady, mealsByDate, trackedDates, getMeals, addMeal, updateMeal, removeMeal, clearDay],
+    [isReady, mealsByDate, getMeals, addMeal, updateMeal, removeMeal, clearDay],
   );
 
   return <MealsContext.Provider value={value}>{children}</MealsContext.Provider>;

@@ -42,9 +42,7 @@ export function sameMonth(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
 }
 
-export function isToday(date: Date): boolean {
-  return toDateKey(date) === toDateKey(new Date());
-}
+
 
 /**
  * Returns a stable 6x7 (42 cell) grid covering the given month, starting on
@@ -88,10 +86,4 @@ export function formatLongDate(date: Date): string {
   }
 }
 
-export function formatShortDate(date: Date): string {
-  try {
-    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  } catch {
-    return `${date.getMonth() + 1}/${date.getDate()}`;
-  }
-}
+
