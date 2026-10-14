@@ -41,3 +41,6 @@ yarn-error.*
 /android
 
 track-meals-release.keystore
+# IDE
+.idea/
+.vscode/
