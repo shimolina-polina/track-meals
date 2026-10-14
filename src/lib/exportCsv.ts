@@ -1,18 +1,9 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-import { Alert } from 'react-native';
 
-import { type MealsByDate, type Meal } from '@/lib/meals';
-import { fromDateKey, formatLongDate } from '@/lib/date';
 
-function mealTypeLabelLocal(type: Meal['type']): string {
-  switch (type) {
-    case 'breakfast': return 'Завтрак';
-    case 'lunch': return 'Обед';
-    case 'dinner': return 'Ужин';
-    case 'snack': return 'Перекус';
-  }
-}
+import { type MealsByDate, type Meal, mealTypeLabel } from '@/lib/meals';
+import { fromDateKey, formatLongDate, toDateKey } from '@/lib/date';
 
 export type ExportRange = 'week' | 'month' | 'range';
 
@@ -57,7 +48,13 @@ function escapeCsv(value: unknown): string {
   return `"${s}"`;
 }
 
-export async function exportMealsToCsv(mealsByDate: MealsByDate, options: ExportOptions): Promise<void> {
+export interface ExportResult {
+  uri: string;
+  shared: boolean;
+  canceled?: boolean;
+}
+
+export async function exportMealsToCsv(mealsByDate: MealsByDate, options: ExportOptions): Promise<ExportResult> {
   const { from, to } = computeRange(options);
   const entries: { date: Date; dateKey: string; meal: Meal }[] = [];
   for (const [key, meals] of Object.entries(mealsByDate)) {
@@ -82,7 +79,7 @@ export async function exportMealsToCsv(mealsByDate: MealsByDate, options: Export
     return [
       escapeCsv(formatLongDate(e.date)),
       escapeCsv(meal.time ?? ''),
-      escapeCsv(mealTypeLabelLocal(meal.type)),
+      escapeCsv(mealTypeLabel(meal.type)),
       escapeCsv(meal.name ?? ''),
       escapeCsv(meal.calories ?? ''),
       escapeCsv(meal.liquidMl ?? ''),
@@ -90,13 +87,17 @@ export async function exportMealsToCsv(mealsByDate: MealsByDate, options: Export
   });
   const csv = [header, ...rows].join('\n');
 
-  const fileName = `питание_${from.getFullYear()}-${String(from.getMonth()+1).padStart(2,'0')}-${String(from.getDate()).padStart(2,'0')}_${to.getFullYear()}-${String(to.getMonth()+1).padStart(2,'0')}-${String(to.getDate()).padStart(2,'0')}.csv`;
+  const fileName = `питание_${toDateKey(from)}_${toDateKey(to)}.csv`;
 
-  const uri = `${(FileSystem as any).cacheDirectory || (FileSystem as any).documentDirectory || '/tmp/'}${fileName}`;
-  await FileSystem.writeAsStringAsync(uri, '\uFEFF' + csv, { encoding: "utf8" });
+  const cacheDir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory ?? '/tmp/';
+  const uri = `${cacheDir}${fileName}`;
+  await FileSystem.writeAsStringAsync(uri, '\uFEFF' + csv, { encoding: FileSystem.EncodingType.UTF8 });
+
   if (!(await Sharing.isAvailableAsync())) {
-    await (FileSystem as any).getContentUriAsync(uri).then((u: string) => Alert.alert('Сохранено', u));
-    return;
+    const contentUri = await FileSystem.getContentUriAsync(uri);
+    return { uri: contentUri, shared: false };
   }
+
   await Sharing.shareAsync(uri, { mimeType: 'text/csv', dialogTitle: 'Экспорт данных' });
+  return { uri, shared: true };
 }
