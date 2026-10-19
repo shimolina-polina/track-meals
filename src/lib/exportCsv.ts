@@ -53,16 +53,22 @@ export async function exportMealsToCsv(mealsByDate: MealsByDate, options: Export
     return ta.localeCompare(tb);
   });
 
-  const header = ['Дата', 'Время', 'Тип приёма', 'Что съедено', 'ккал', 'мл'].join(',');
+  const getWeekDay = (d: Date): string => {
+    const days = ['ВС', 'ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ'];
+    return days[d.getDay()];
+  };
+  const header = ['Дата', 'День недели', 'Время', 'Тип приёма', 'Что съедено', 'объем - мл', 'вес - гр', 'физ.активность - мин'].join(',');
   const rows = entries.map((e) => {
     const meal = e.meal;
     return [
       escapeCsv(formatLongDate(e.date)),
+      escapeCsv(getWeekDay(e.date)),
       escapeCsv(meal.time ?? ''),
       escapeCsv(mealTypeLabel(meal.type)),
       escapeCsv(meal.name ?? ''),
-      escapeCsv(meal.calories ?? ''),
       escapeCsv(meal.liquidMl ?? ''),
+      escapeCsv(meal.weightGrams ?? ''),
+      escapeCsv(meal.activityMinutes ?? ''),
     ].join(',');
   });
   const csv = [header, ...rows].join('\n');

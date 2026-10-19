@@ -23,7 +23,16 @@ export function MealForm({ editingMeal, onSubmit, onCancel }: MealFormProps) {
   const [type, setType] = useState<MealType>(editingMeal?.type ?? 'breakfast');
   const [caloriesText, setCaloriesText] = useState(toNumberText(editingMeal?.calories ?? null));
   const [liquidText, setLiquidText] = useState(toNumberText(editingMeal?.liquidMl ?? null));
-  const [timeText, setTimeText] = useState(editingMeal?.time ?? '');
+  const [weightText, setWeightText] = useState(toNumberText(editingMeal?.weightGrams ?? null));
+  const [activityText, setActivityText] = useState(toNumberText(editingMeal?.activityMinutes ?? null));
+  const [timeText, setTimeText] = useState(() => {
+    if (editingMeal?.time) return editingMeal.time;
+    if (editingMeal) return '';
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    return `${hh}:${mm}`;
+  });
 
   const calories = useMemo(() => {
     const trimmed = caloriesText.trim();
@@ -39,6 +48,20 @@ export function MealForm({ editingMeal, onSubmit, onCancel }: MealFormProps) {
     return Number.isFinite(parsed) ? Math.max(0, Math.round(parsed)) : null;
   }, [liquidText]);
 
+  const weightGrams = useMemo(() => {
+    const trimmed = weightText.trim();
+    if (trimmed === '') return null;
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? Math.max(0, Math.round(parsed)) : null;
+  }, [weightText]);
+
+  const activityMinutes = useMemo(() => {
+    const trimmed = activityText.trim();
+    if (trimmed === '') return null;
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? Math.max(0, Math.round(parsed)) : null;
+  }, [activityText]);
+
   const canSubmit = name.trim().length > 0;
 
   const submit = () => {
@@ -49,6 +72,8 @@ export function MealForm({ editingMeal, onSubmit, onCancel }: MealFormProps) {
       type,
       calories,
       liquidMl,
+      weightGrams,
+      activityMinutes,
       time: timeText.trim() === '' ? null : timeText,
     });
   };
@@ -88,6 +113,30 @@ export function MealForm({ editingMeal, onSubmit, onCancel }: MealFormProps) {
         value={liquidText}
         onChangeText={setLiquidText}
         placeholder="Жидкость, мл (необязательно)"
+        placeholderTextColor={theme.subtext}
+        keyboardType="number-pad"
+        style={StyleSheet.flatten([
+          styles.input,
+          { color: theme.text, borderColor: theme.border, backgroundColor: theme.cardMuted },
+        ])}
+      />
+
+      <TextInput
+        value={weightText}
+        onChangeText={setWeightText}
+        placeholder="Вес, г (необязательно)"
+        placeholderTextColor={theme.subtext}
+        keyboardType="number-pad"
+        style={StyleSheet.flatten([
+          styles.input,
+          { color: theme.text, borderColor: theme.border, backgroundColor: theme.cardMuted },
+        ])}
+      />
+
+      <TextInput
+        value={activityText}
+        onChangeText={setActivityText}
+        placeholder="Физ. активность, мин (необязательно)"
         placeholderTextColor={theme.subtext}
         keyboardType="number-pad"
         style={StyleSheet.flatten([

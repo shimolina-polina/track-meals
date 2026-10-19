@@ -17,6 +17,8 @@ export interface Meal {
   type: MealType;
   calories: number | null;
   liquidMl: number | null;
+  weightGrams: number | null;
+  activityMinutes: number | null;
   time: string | null;
 }
 
@@ -52,6 +54,14 @@ export function normalizeInput(input: MealInput): MealInput {
       input.liquidMl === null || Number.isNaN(input.liquidMl)
         ? null
         : Math.max(0, Math.round(input.liquidMl)),
+    weightGrams:
+      input.weightGrams === null || Number.isNaN(input.weightGrams)
+        ? null
+        : Math.max(0, Math.round(input.weightGrams)),
+    activityMinutes:
+      input.activityMinutes === null || Number.isNaN(input.activityMinutes)
+        ? null
+        : Math.max(0, Math.round(input.activityMinutes)),
     time: normTime(input.time),
   };
 }
@@ -77,6 +87,14 @@ function sanitizeMeal(value: unknown): Meal | null {
     typeof record.liquidMl === 'number' && Number.isFinite(record.liquidMl)
       ? Math.max(0, Math.round(record.liquidMl))
       : null;
+  const weightGrams =
+    typeof record.weightGrams === 'number' && Number.isFinite(record.weightGrams)
+      ? Math.max(0, Math.round(record.weightGrams))
+      : null;
+  const activityMinutes =
+    typeof record.activityMinutes === 'number' && Number.isFinite(record.activityMinutes)
+      ? Math.max(0, Math.round(record.activityMinutes))
+      : null;
   const timeRaw = record.time;
   const time = typeof timeRaw === 'string' ? normTime(timeRaw) : null;
   return {
@@ -85,6 +103,8 @@ function sanitizeMeal(value: unknown): Meal | null {
     type: isMealType(record.type) ? record.type : 'breakfast',
     calories,
     liquidMl,
+    weightGrams,
+    activityMinutes,
     time,
   };
 }

@@ -29,6 +29,8 @@ export function MealList({ meals, onEdit, onRemove }: MealListProps) {
                 {mealTypeLabel(meal.type)}
                 {meal.calories === null ? '' : ` · ${meal.calories} ккал`}
                 {meal.liquidMl === null ? '' : ` · ${meal.liquidMl} мл`}
+                {meal.weightGrams === null ? '' : ` · ${meal.weightGrams} г`}
+                {meal.activityMinutes === null ? '' : ` · ${meal.activityMinutes} мин`}
                 {meal.time ? ` · ${meal.time}` : ''}
               </Text>
             </Pressable>
