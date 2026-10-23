@@ -44,3 +44,6 @@ track-meals-release.keystore
 # IDE
 .idea/
 .vscode/
+
+# agents
+.agents/
