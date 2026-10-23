@@ -65,11 +65,11 @@ jobs:
 
           cat >> android/gradle.properties << EOF
 
-MYAPP_UPLOAD_STORE_FILE=release.keystore
-MYAPP_UPLOAD_STORE_PASSWORD=$KEYSTORE_PASSWORD
-MYAPP_UPLOAD_KEY_ALIAS=$KEY_ALIAS
-MYAPP_UPLOAD_KEY_PASSWORD=$KEY_PASSWORD
-EOF
+          MYAPP_UPLOAD_STORE_FILE=release.keystore
+          MYAPP_UPLOAD_STORE_PASSWORD=$KEYSTORE_PASSWORD
+          MYAPP_UPLOAD_KEY_ALIAS=$KEY_ALIAS
+          MYAPP_UPLOAD_KEY_PASSWORD=$KEY_PASSWORD
+          EOF
 
           python3 scripts/ci-configure-signing.py
 
