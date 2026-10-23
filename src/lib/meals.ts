@@ -150,4 +150,20 @@ export function hasLiquid(meals: Meal[]): boolean {
   return meals.some((meal) => meal.liquidMl !== null);
 }
 
+export function totalWeightGrams(meals: Meal[]): number {
+  return meals.reduce((sum, meal) => sum + (meal.weightGrams ?? 0), 0);
+}
+
+export function totalActivityMinutes(meals: Meal[]): number {
+  return meals.reduce((sum, meal) => sum + (meal.activityMinutes ?? 0), 0);
+}
+
+export function hasWeight(meals: Meal[]): boolean {
+  return meals.some((meal) => meal.weightGrams !== null);
+}
+
+export function hasActivity(meals: Meal[]): boolean {
+  return meals.some((meal) => meal.activityMinutes !== null);
+}
+
 

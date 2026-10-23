@@ -108,7 +108,18 @@ function EditDayContent({ dateKey, date }: { dateKey: string; date: Date }) {
       <ScrollView contentContainerStyle={StyleSheet.flatten([styles.content, { paddingBottom: Math.max(styles.content.padding, insets.bottom) }])} keyboardShouldPersistTaps="handled">
         <DaySummaryCard meals={meals} />
 
-        <MealList meals={meals} onEdit={setEditingId} onRemove={(id) => removeMeal(dateKey, id)} />
+        <MealList
+          meals={[...meals].sort((a, b) => {
+            const ta = a.time || '';
+            const tb = b.time || '';
+            if (ta === tb) return 0;
+            if (ta === '') return 1;
+            if (tb === '') return -1;
+            return ta.localeCompare(tb);
+          })}
+          onEdit={setEditingId}
+          onRemove={(id) => removeMeal(dateKey, id)}
+        />
 
         <MealForm
           key={editingId ?? 'new'}
