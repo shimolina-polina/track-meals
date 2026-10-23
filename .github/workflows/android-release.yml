@@ -45,9 +45,9 @@ jobs:
         run: node scripts/ci-set-version-code.mjs
 
       - name: Prebuild Android
-        run: npx expo prebuild --platform android --clean --no-install
+        run: npx expo prebuild --platform android --no-install
 
-      - name: Setup signing
+      - name: Configure signing
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -55,48 +55,29 @@ jobs:
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -e
-          echo "Checking secrets..."
-          [ -n "$KEYSTORE_BASE64" ] || (echo "ANDROID_KEYSTORE_BASE64 missing" && exit 1)
-          [ -n "$KEYSTORE_PASSWORD" ] || (echo "ANDROID_KEYSTORE_PASSWORD missing" && exit 1)
-          [ -n "$KEY_ALIAS" ] || (echo "ANDROID_KEY_ALIAS missing" && exit 1)
-          [ -n "$KEY_PASSWORD" ] || (echo "ANDROID_KEY_PASSWORD missing" && exit 1)
+          test -n "$KEYSTORE_BASE64" || { echo "Missing ANDROID_KEYSTORE_BASE64"; exit 1; }
+          test -n "$KEYSTORE_PASSWORD" || { echo "Missing ANDROID_KEYSTORE_PASSWORD"; exit 1; }
+          test -n "$KEY_ALIAS" || { echo "Missing ANDROID_KEY_ALIAS"; exit 1; }
+          test -n "$KEY_PASSWORD" || { echo "Missing ANDROID_KEY_PASSWORD"; exit 1; }
 
           mkdir -p android/app
-          echo "$KEYSTORE_BASE64" | base64 -d > android/app/upload.keystore
+          echo "$KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
 
-          # Add signing props
-          cat >> android/gradle.properties << 'EOF'
+          cat >> android/gradle.properties << EOF
 
-          MYAPP_UPLOAD_STORE_FILE=upload.keystore
-          MYAPP_UPLOAD_STORE_PASSWORD=${KEYSTORE_PASSWORD}
-          MYAPP_UPLOAD_KEY_ALIAS=${KEY_ALIAS}
-          MYAPP_UPLOAD_KEY_PASSWORD=${KEY_PASSWORD}
-          EOF
-          # expand env in gradle.properties
-          envsubst < android/gradle.properties > android/gradle.properties.tmp && mv android/gradle.properties.tmp android/gradle.properties
+MYAPP_UPLOAD_STORE_FILE=release.keystore
+MYAPP_UPLOAD_STORE_PASSWORD=$KEYSTORE_PASSWORD
+MYAPP_UPLOAD_KEY_ALIAS=$KEY_ALIAS
+MYAPP_UPLOAD_KEY_PASSWORD=$KEY_PASSWORD
+EOF
 
-          # Patch build.gradle to use release signing
-          BUILD_GRADLE="android/app/build.gradle"
-          if ! grep -q "MYAPP_UPLOAD_STORE_FILE" "$BUILD_GRADLE"; then
-            # add signingConfigs if missing
-            if ! grep -q "signingConfigs" "$BUILD_GRADLE"; then
-              sed -i "/android\s*{/a\    signingConfigs {\n        release {\n            if (project.hasProperty('MYAPP_UPLOAD_STORE_FILE')) {\n                storeFile file(MYAPP_UPLOAD_STORE_FILE)\n                storePassword MYAPP_UPLOAD_STORE_PASSWORD\n                keyAlias MYAPP_UPLOAD_KEY_ALIAS\n                keyPassword MYAPP_UPLOAD_KEY_PASSWORD\n            }\n        }\n    }" "$BUILD_GRADLE"
-            else
-              # append release to existing signingConfigs
-              awk '/signingConfigs \{/ {print; in=1; next} in && /\}/ {print "        release {\n            if (project.hasProperty('\''MYAPP_UPLOAD_STORE_FILE'\'')) {\n                storeFile file(MYAPP_UPLOAD_STORE_FILE)\n                storePassword MYAPP_UPLOAD_STORE_PASSWORD\n                keyAlias MYAPP_UPLOAD_KEY_ALIAS\n                keyPassword MYAPP_UPLOAD_KEY_PASSWORD\n            }\n        }"; print; in=0; next} {print}' "$BUILD_GRADLE" > "$BUILD_GRADLE.tmp" && mv "$BUILD_GRADLE.tmp" "$BUILD_GRADLE"
-            fi
-          fi
-
-          # use release signing for release buildType
-          sed -i "s/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g" "$BUILD_GRADLE"
-          # if not replaced, try to add
-          grep -q "signingConfig signingConfigs.release" "$BUILD_GRADLE" || sed -i "/buildTypes\s*{/,/^\s*}/ s/\(release\s*{\)/\1\n            signingConfig signingConfigs.release/" "$BUILD_GRADLE"
+          python3 scripts/ci-configure-signing.py
 
       - name: Build APK
         working-directory: android
         run: |
           chmod +x gradlew
-          ./gradlew clean assembleRelease --no-daemon
+          ./gradlew assembleRelease --no-daemon
 
       - name: Get version
         id: meta
@@ -106,7 +87,7 @@ jobs:
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "apk=track-meals-${TAG}.apk" >> $GITHUB_OUTPUT
 
-      - name: Rename APK
+      - name: Prepare release
         run: |
           mkdir -p release
           cp android/app/build/outputs/apk/release/app-release.apk "release/${{ steps.meta.outputs.apk }}"
