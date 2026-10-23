@@ -14,108 +14,109 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release:
+  build:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
+          cache: 'npm'
 
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
-          java-version: 17
+          distribution: 'temurin'
+          java-version: '17'
 
-      - name: Install dependencies
+      - name: Install deps
         run: npm ci
 
-      - name: Set Android versionCode from run number
+      - name: Bump versionCode
         env:
           RUN_NUMBER: ${{ github.run_number }}
         run: node scripts/ci-set-version-code.mjs
 
-      - name: Generate Android project
-        run: npx expo prebuild --platform android --no-install
+      - name: Prebuild Android
+        run: npx expo prebuild --platform android --clean --no-install
 
-      - name: Configure Android release signing
+      - name: Setup signing
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          test -n "$KEYSTORE_BASE64" || { echo "Missing ANDROID_KEYSTORE_BASE64"; exit 1; }
-          test -n "$KEY_ALIAS" || { echo "Missing ANDROID_KEY_ALIAS"; exit 1; }
+          set -e
+          echo "Checking secrets..."
+          [ -n "$KEYSTORE_BASE64" ] || (echo "ANDROID_KEYSTORE_BASE64 missing" && exit 1)
+          [ -n "$KEYSTORE_PASSWORD" ] || (echo "ANDROID_KEYSTORE_PASSWORD missing" && exit 1)
+          [ -n "$KEY_ALIAS" ] || (echo "ANDROID_KEY_ALIAS missing" && exit 1)
+          [ -n "$KEY_PASSWORD" ] || (echo "ANDROID_KEY_PASSWORD missing" && exit 1)
 
           mkdir -p android/app
-          echo "$KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
+          echo "$KEYSTORE_BASE64" | base64 -d > android/app/upload.keystore
 
-          cat >> android/gradle.properties <<EOF
+          # Add signing props
+          cat >> android/gradle.properties << 'EOF'
 
-          MYAPP_UPLOAD_STORE_FILE=release.keystore
-          MYAPP_UPLOAD_KEY_ALIAS=$KEY_ALIAS
-          MYAPP_UPLOAD_STORE_PASSWORD=$KEYSTORE_PASSWORD
-          MYAPP_UPLOAD_KEY_PASSWORD=$KEY_PASSWORD
+          MYAPP_UPLOAD_STORE_FILE=upload.keystore
+          MYAPP_UPLOAD_STORE_PASSWORD=${KEYSTORE_PASSWORD}
+          MYAPP_UPLOAD_KEY_ALIAS=${KEY_ALIAS}
+          MYAPP_UPLOAD_KEY_PASSWORD=${KEY_PASSWORD}
           EOF
+          # expand env in gradle.properties
+          envsubst < android/gradle.properties > android/gradle.properties.tmp && mv android/gradle.properties.tmp android/gradle.properties
 
-          python3 scripts/ci-configure-signing.py
+          # Patch build.gradle to use release signing
+          BUILD_GRADLE="android/app/build.gradle"
+          if ! grep -q "MYAPP_UPLOAD_STORE_FILE" "$BUILD_GRADLE"; then
+            # add signingConfigs if missing
+            if ! grep -q "signingConfigs" "$BUILD_GRADLE"; then
+              sed -i "/android\s*{/a\    signingConfigs {\n        release {\n            if (project.hasProperty('MYAPP_UPLOAD_STORE_FILE')) {\n                storeFile file(MYAPP_UPLOAD_STORE_FILE)\n                storePassword MYAPP_UPLOAD_STORE_PASSWORD\n                keyAlias MYAPP_UPLOAD_KEY_ALIAS\n                keyPassword MYAPP_UPLOAD_KEY_PASSWORD\n            }\n        }\n    }" "$BUILD_GRADLE"
+            else
+              # append release to existing signingConfigs
+              awk '/signingConfigs \{/ {print; in=1; next} in && /\}/ {print "        release {\n            if (project.hasProperty('\''MYAPP_UPLOAD_STORE_FILE'\'')) {\n                storeFile file(MYAPP_UPLOAD_STORE_FILE)\n                storePassword MYAPP_UPLOAD_STORE_PASSWORD\n                keyAlias MYAPP_UPLOAD_KEY_ALIAS\n                keyPassword MYAPP_UPLOAD_KEY_PASSWORD\n            }\n        }"; print; in=0; next} {print}' "$BUILD_GRADLE" > "$BUILD_GRADLE.tmp" && mv "$BUILD_GRADLE.tmp" "$BUILD_GRADLE"
+            fi
+          fi
 
-      - name: Build release APK
+          # use release signing for release buildType
+          sed -i "s/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g" "$BUILD_GRADLE"
+          # if not replaced, try to add
+          grep -q "signingConfig signingConfigs.release" "$BUILD_GRADLE" || sed -i "/buildTypes\s*{/,/^\s*}/ s/\(release\s*{\)/\1\n            signingConfig signingConfigs.release/" "$BUILD_GRADLE"
+
+      - name: Build APK
         working-directory: android
         run: |
           chmod +x gradlew
-          ./gradlew assembleRelease
+          ./gradlew clean assembleRelease --no-daemon
 
-      - name: Verify APK signature
+      - name: Get version
+        id: meta
         run: |
-          SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
-          APKSIGNER="$(find "$SDK/build-tools" -name apksigner -type f | sort -V | tail -1)"
-          test -n "$APKSIGNER" || { echo "apksigner not found in $SDK/build-tools"; exit 1; }
-          "$APKSIGNER" verify --verbose android/app/build/outputs/apk/release/app-release.apk
+          VER=$(node -p "require('./app.json').expo.version")
+          TAG="v${VER}-r${{ github.run_number }}"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "apk=track-meals-${TAG}.apk" >> $GITHUB_OUTPUT
 
-      - name: Read app version
-        id: version
-        run: |
-          VERSION=$(node -p "require('./app.json').expo.version")
-          TAG="v${VERSION}-build.${GITHUB_RUN_NUMBER}"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-
-      - name: Prepare APK
+      - name: Rename APK
         run: |
           mkdir -p release
-          cp android/app/build/outputs/apk/release/app-release.apk \
-            "release/app-${{ steps.version.outputs.tag }}.apk"
+          cp android/app/build/outputs/apk/release/app-release.apk "release/${{ steps.meta.outputs.apk }}"
 
-      - name: Create and push Git tag
-        env:
-          TAG: ${{ steps.version.outputs.tag }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email \
-            "41898282+github-actions[bot]@users.noreply.github.com"
-
-          if git ls-remote --exit-code --tags origin "refs/tags/$TAG"; then
-            echo "Tag $TAG already exists"
-            exit 1
-          fi
-
-          git tag -a "$TAG" -m "Release $TAG"
-          git push origin "$TAG"
-
-      - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v3
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version.outputs.tag }}
-          name: Android ${{ steps.version.outputs.tag }}
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: Track Meals ${{ steps.meta.outputs.tag }}
+          draft: false
+          prerelease: false
+          files: release/${{ steps.meta.outputs.apk }}
           generate_release_notes: true
-          files: release/*.apk
